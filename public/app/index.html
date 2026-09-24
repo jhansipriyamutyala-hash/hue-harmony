@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chroma — Color Picker</title>
+  <meta name="description" content="Pick colors, copy HEX/RGB/HSL values, and save them to your palette." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">
+        <span class="dot"></span>
+        <span>Chroma <small>· color picker</small></span>
+      </a>
+      <button class="menu-btn" aria-label="Menu">☰</button>
+      <nav class="nav">
+        <a href="index.html" class="active">Picker</a>
+        <a href="palette.html">Palette</a>
+        <a href="converter.html">Converter</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app">
+    <section class="hero">
+      <h1>Pick a color</h1>
+      <p>Drag the sliders, tap the swatch, or use the native picker. Copy any value in one click.</p>
+    </section>
+
+    <div class="card picker-stage">
+      <div class="color-orb" id="orb"></div>
+
+      <div class="picker-controls">
+        <input type="color" id="colorInput" value="#6c5ce7" />
+        <button class="btn btn-primary" id="saveBtn">＋ Save to palette</button>
+        <button class="btn" id="randomBtn">🎲 Random</button>
+      </div>
+
+      <div class="slider-row">
+        <label>H</label>
+        <input type="range" id="hue" min="0" max="360" value="249" />
+        <span class="val" id="hueVal">249</span>
+      </div>
+      <div class="slider-row">
+        <label>S</label>
+        <input type="range" id="sat" min="0" max="100" value="71" />
+        <span class="val" id="satVal">71</span>
+      </div>
+      <div class="slider-row">
+        <label>L</label>
+        <input type="range" id="light" min="0" max="100" value="64" />
+        <span class="val" id="lightVal">64</span>
+      </div>
+    </div>
+
+    <h2 class="section-title">Color values</h2>
+    <div class="value-grid">
+      <div class="value-chip">
+        <div class="label">HEX</div>
+        <div class="val" id="hexVal">#6C5CE7</div>
+        <button class="btn btn-sm" data-copy="hex">Copy</button>
+      </div>
+      <div class="value-chip">
+        <div class="label">RGB</div>
+        <div class="val" id="rgbVal">108, 92, 231</div>
+        <button class="btn btn-sm" data-copy="rgb">Copy</button>
+      </div>
+      <div class="value-chip">
+        <div class="label">HSL</div>
+        <div class="val" id="hslVal">249°, 71%, 64%</div>
+        <button class="btn btn-sm" data-copy="hsl">Copy</button>
+      </div>
+    </div>
+
+    <h2 class="section-title">Recent colors</h2>
+    <div class="card">
+      <div class="swatches" id="recent"></div>
+    </div>
+  </main>
+
+  <footer>Chroma · built with pure HTML5, CSS3 & JavaScript</footer>
+
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      const orb = document.getElementById("orb");
+      const colorInput = document.getElementById("colorInput");
+      const hue = document.getElementById("hue");
+      const sat = document.getElementById("sat");
+      const light = document.getElementById("light");
+      const hexVal = document.getElementById("hexVal");
+      const rgbVal = document.getElementById("rgbVal");
+      const hslVal = document.getElementById("hslVal");
+      const recent = document.getElementById("recent");
+
+      let state = { h: 249, s: 71, l: 64 };
+
+      function render() {
+        const rgb = CP.hslToRgb(state.h, state.s, state.l);
+        const hex = CP.rgbToHex(rgb.r, rgb.g, rgb.b);
+        orb.style.background = hex;
+        orb.style.boxShadow = "0 20px 60px " + hex + "88, inset 0 0 0 8px rgba(255,255,255,0.06)";
+        colorInput.value = hex;
+        hexVal.textContent = hex.toUpperCase();
+        rgbVal.textContent = rgb.r + ", " + rgb.g + ", " + rgb.b;
+        hslVal.textContent = state.h + "°, " + state.s + "%, " + state.l + "%";
+        hue.value = state.h; sat.value = state.s; light.value = state.l;
+        document.getElementById("hueVal").textContent = state.h;
+        document.getElementById("satVal").textContent = state.s;
+        document.getElementById("lightVal").textContent = state.l;
+      }
+
+      function fromHex(hex) {
+        const rgb = CP.hexToRgb(hex);
+        if (!rgb) return;
+        const hsl = CP.rgbToHsl(rgb.r, rgb.g, rgb.b);
+        state = hsl;
+        render();
+      }
+
+      hue.addEventListener("input", () => { state.h = +hue.value; render(); });
+      sat.addEventListener("input", () => { state.s = +sat.value; render(); });
+      light.addEventListener("input", () => { state.l = +light.value; render(); });
+      colorInput.addEventListener("input", () => fromHex(colorInput.value));
+
+      document.getElementById("randomBtn").addEventListener("click", () => {
+        state = {
+          h: Math.floor(Math.random() * 360),
+          s: 40 + Math.floor(Math.random() * 60),
+          l: 35 + Math.floor(Math.random() * 45),
+        };
+        render();
+      });
+
+      document.getElementById("saveBtn").addEventListener("click", () => {
+        const rgb = CP.hslToRgb(state.h, state.s, state.l);
+        const hex = CP.rgbToHex(rgb.r, rgb.g, rgb.b);
+        CP.addColor(hex);
+        CP.toast("Saved " + hex.toUpperCase());
+        renderRecent();
+      });
+
+      document.querySelectorAll("[data-copy]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const t = btn.getAttribute("data-copy");
+          const text = t === "hex" ? hexVal.textContent
+                     : t === "rgb" ? "rgb(" + rgbVal.textContent + ")"
+                     : "hsl(" + state.h + ", " + state.s + "%, " + state.l + "%)";
+          CP.copyText(text);
+        });
+      });
+
+      function renderRecent() {
+        const list = CP.getPalettes();
+        recent.innerHTML = "";
+        if (!list.length) {
+          recent.innerHTML = '<p class="empty" style="width:100%">No saved colors yet — pick one and hit “Save to palette”.</p>';
+          return;
+        }
+        list.slice(0, 14).forEach((hex) => {
+          const s = document.createElement("div");
+          s.className = "swatch";
+          s.style.background = hex;
+          s.title = hex.toUpperCase() + " — click to apply";
+          s.addEventListener("click", () => fromHex(hex));
+          recent.appendChild(s);
+        });
+      }
+
+      render();
+      renderRecent();
+    })();
+  </script>
+</body>
+</html>

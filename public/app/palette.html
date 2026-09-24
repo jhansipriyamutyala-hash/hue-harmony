@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chroma — My Palette</title>
+  <meta name="description" content="Your saved color palette. Copy or remove colors anytime." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">
+        <span class="dot"></span>
+        <span>Chroma <small>· color picker</small></span>
+      </a>
+      <button class="menu-btn" aria-label="Menu">☰</button>
+      <nav class="nav">
+        <a href="index.html">Picker</a>
+        <a href="palette.html" class="active">Palette</a>
+        <a href="converter.html">Converter</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app">
+    <section class="hero">
+      <h1>My palette</h1>
+      <p>Colors you saved from the picker. Tap a swatch to copy its HEX, or the ✕ to remove it.</p>
+    </section>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:8px;">
+      <button class="btn btn-danger" id="clearBtn">Clear all</button>
+      <a class="btn btn-primary" href="index.html">＋ Pick new color</a>
+    </div>
+
+    <div class="card">
+      <div class="swatches" id="palette"></div>
+    </div>
+
+    <h2 class="section-title">Details</h2>
+    <div class="card">
+      <div class="value-grid" id="details"></div>
+    </div>
+  </main>
+
+  <footer>Chroma · built with pure HTML5, CSS3 & JavaScript</footer>
+
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      const palette = document.getElementById("palette");
+      const details = document.getElementById("details");
+
+      function render() {
+        const list = CP.getPalettes();
+        palette.innerHTML = "";
+        if (!list.length) {
+          palette.innerHTML = '<p class="empty" style="width:100%">Your palette is empty. Save colors from the picker page.</p>';
+          details.innerHTML = '<p class="empty" style="width:100%">No colors to show.</p>';
+          return;
+        }
+        list.forEach((hex) => {
+          const s = document.createElement("div");
+          s.className = "swatch";
+          s.style.background = hex;
+          s.title = hex.toUpperCase() + " — click to copy";
+          const x = document.createElement("span");
+          x.className = "x";
+          x.textContent = "✕";
+          x.addEventListener("click", (e) => {
+            e.stopPropagation();
+            CP.removeColor(hex);
+            CP.toast("Removed " + hex.toUpperCase());
+            render();
+          });
+          s.appendChild(x);
+          s.addEventListener("click", () => CP.copyText(hex.toUpperCase()));
+          palette.appendChild(s);
+        });
+
+        // details for first 3
+        details.innerHTML = "";
+        list.slice(0, 3).forEach((hex) => {
+          const rgb = CP.hexToRgb(hex);
+          const hsl = CP.rgbToHsl(rgb.r, rgb.g, rgb.b);
+          const chip = document.createElement("div");
+          chip.className = "value-chip";
+          chip.innerHTML =
+            '<div class="label">' + hex.toUpperCase() + '</div>' +
+            '<div class="val">' + rgb.r + ", " + rgb.g + ", " + rgb.b + '</div>' +
+            '<div class="val" style="font-size:13px;color:var(--muted)">' + hsl.h + "°, " + hsl.s + "%, " + hsl.l + "%</div>" +
+            '<button class="btn btn-sm" data-hex="' + hex + '">Copy HEX</button>';
+          chip.querySelector("button").addEventListener("click", () => CP.copyText(hex.toUpperCase()));
+          details.appendChild(chip);
+        });
+      }
+
+      document.getElementById("clearBtn").addEventListener("click", () => {
+        if (confirm("Clear your entire palette?")) {
+          CP.savePalettes([]);
+          render();
+          CP.toast("Palette cleared");
+        }
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
