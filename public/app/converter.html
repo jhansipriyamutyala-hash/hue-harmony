@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chroma — Color Converter</title>
+  <meta name="description" content="Convert colors between HEX, RGB and HSL formats instantly." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">
+        <span class="dot"></span>
+        <span>Chroma <small>· color picker</small></span>
+      </a>
+      <button class="menu-btn" aria-label="Menu">☰</button>
+      <nav class="nav">
+        <a href="index.html">Picker</a>
+        <a href="palette.html">Palette</a>
+        <a href="converter.html" class="active">Converter</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app">
+    <section class="hero">
+      <h1>Color converter</h1>
+      <p>Type any HEX, RGB or HSL value — the others update live, with a preview.</p>
+    </section>
+
+    <div class="card">
+      <div class="conv-preview" id="preview"></div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <div class="conv-row" style="margin-bottom:14px;">
+        <label>HEX</label>
+        <input type="text" class="conv-input" id="hexIn" value="#6c5ce7" />
+        <button class="btn btn-sm" data-copy="hex">Copy</button>
+      </div>
+      <div class="conv-row" style="margin-bottom:14px;">
+        <label>RGB</label>
+        <input type="text" class="conv-input" id="rgbIn" value="rgb(108, 92, 231)" />
+        <button class="btn btn-sm" data-copy="rgb">Copy</button>
+      </div>
+      <div class="conv-row">
+        <label>HSL</label>
+        <input type="text" class="conv-input" id="hslIn" value="hsl(249, 71%, 64%)" />
+        <button class="btn btn-sm" data-copy="hsl">Copy</button>
+      </div>
+      <p id="err" style="color:var(--danger); margin-top:12px; font-size:13px; min-height:18px;"></p>
+    </div>
+
+    <h2 class="section-title">Quick swatches</h2>
+    <div class="card">
+      <div class="swatches" id="quick"></div>
+    </div>
+  </main>
+
+  <footer>Chroma · built with pure HTML5, CSS3 & JavaScript</footer>
+
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      const hexIn = document.getElementById("hexIn");
+      const rgbIn = document.getElementById("rgbIn");
+      const hslIn = document.getElementById("hslIn");
+      const preview = document.getElementById("preview");
+      const err = document.getElementById("err");
+
+      let rgb = { r: 108, g: 92, b: 231 };
+
+      function fmt() {
+        const hsl = CP.rgbToHsl(rgb.r, rgb.g, rgb.b);
+        return {
+          hex: CP.rgbToHex(rgb.r, rgb.g, rgb.b),
+          rgb: "rgb(" + rgb.r + ", " + rgb.g + ", " + rgb.b + ")",
+          hsl: "hsl(" + hsl.h + ", " + hsl.s + "%, " + hsl.l + "%)",
+        };
+      }
+
+      function render(source) {
+        const f = fmt();
+        preview.style.background = f.hex;
+        if (source !== "hex") hexIn.value = f.hex;
+        if (source !== "rgb") rgbIn.value = f.rgb;
+        if (source !== "hsl") hslIn.value = f.hsl;
+        err.textContent = "";
+      }
+
+      function parseRgb(str) {
+        const m = str.match(/(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/);
+        if (!m) return null;
+        const r = +m[1], g = +m[2], b = +m[3];
+        if ([r, g, b].some((v) => v > 255)) return null;
+        return { r, g, b };
+      }
+      function parseHsl(str) {
+        const m = str.match(/(\d{1,3})\s*,\s*(\d{1,3})%?\s*,\s*(\d{1,3})%?/);
+        if (!m) return null;
+        return CP.hslToRgb(+m[1], +m[2], +m[3]);
+      }
+
+      hexIn.addEventListener("input", () => {
+        if (CP.isValidHex(hexIn.value)) {
+          rgb = CP.hexToRgb(hexIn.value);
+          render("hex");
+        } else err.textContent = "Enter a valid HEX like #6c5ce7 or #fff";
+      });
+      rgbIn.addEventListener("input", () => {
+        const p = parseRgb(rgbIn.value);
+        if (p) { rgb = p; render("rgb"); }
+        else err.textContent = "Enter RGB like rgb(108, 92, 231)";
+      });
+      hslIn.addEventListener("input", () => {
+        const p = parseHsl(hslIn.value);
+        if (p) { rgb = p; render("hsl"); }
+        else err.textContent = "Enter HSL like hsl(249, 71%, 64%)";
+      });
+
+      document.querySelectorAll("[data-copy]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const t = btn.getAttribute("data-copy");
+          CP.copyText(t === "hex" ? hexIn.value : t === "rgb" ? rgbIn.value : hslIn.value);
+        });
+      });
+
+      // quick swatches
+      const quick = document.getElementById("quick");
+      ["#ff6b6b", "#feca57", "#00cec9", "#6c5ce7", "#ff9ff3", "#1dd1a1", "#54a0ff", "#222f3e"].forEach((hex) => {
+        const s = document.createElement("div");
+        s.className = "swatch";
+        s.style.background = hex;
+        s.title = hex.toUpperCase();
+        s.addEventListener("click", () => { rgb = CP.hexToRgb(hex); render(); });
+        quick.appendChild(s);
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
